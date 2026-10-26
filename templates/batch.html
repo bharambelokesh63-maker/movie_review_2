@@ -1,39 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Multiple Reviews{% endblock %}
+{% block title %}Batch Analysis{% endblock %}
 {% block content %}
-<h1>Analyze multiple reviews</h1>
-<p>Paste several reviews (separate them with a blank line) <strong>or</strong> upload a CSV file. A column named
-   <code>review</code> or <code>text</code> is detected automatically. An optional <code>rating</code> column
-   is averaged only if it exists in your file.</p>
+
+<h1>Batch review analysis</h1>
+<p style="color:var(--ink-soft); margin-bottom:1.5rem;">
+  Paste multiple reviews separated by a blank line, or upload a CSV file. The analyzer processes
+  every review and then shows sentiment distribution, charts, opinion words, aspect breakdown,
+  topic modelling and a per-review table on the results page.
+</p>
 
 <section class="card">
   <form method="post" action="{{ url_for('batch') }}" enctype="multipart/form-data" class="js-loading">
-    <label for="movie">Movie name (optional)</label>
-    <input id="movie" name="movie" type="text" maxlength="120" value="{{ form.movie if form else '' }}">
+
+    <label for="movie">Movie title <span class="small">(optional)</span></label>
+    <input id="movie" name="movie" type="text" maxlength="120"
+           placeholder="Leave blank if analyzing reviews for multiple films"
+           value="{{ form.movie if form else '' }}">
 
     <label for="reviews">Paste reviews</label>
-    <textarea id="reviews" name="reviews" rows="8" placeholder="Review one…&#10;&#10;Review two…">{{ form.reviews if form else '' }}</textarea>
+    <textarea id="reviews" name="reviews" rows="9"
+              placeholder="Review one...&#10;&#10;Review two...&#10;&#10;Review three...">{{ form.reviews if form else '' }}</textarea>
+    <div class="hint">Separate each review with one blank line.</div>
 
-    <label for="csv_file">…or upload a CSV file</label>
+    <label for="csv_file">Or upload a CSV file</label>
     <input id="csv_file" name="csv_file" type="file" accept=".csv,.txt">
+    <div class="hint">A column named <code>review</code> or <code>text</code> is detected automatically. An optional <code>rating</code> column is averaged.</div>
 
-    <details>
-      <summary>Column names differ? Choose them manually</summary>
-      <div class="grid2">
-        <div><label for="text_col">Review column</label>
-          <input id="text_col" name="text_col" type="text" placeholder="e.g. comment" value="{{ form.text_col if form else '' }}"></div>
-        <div><label for="rating_col">Rating column</label>
-          <input id="rating_col" name="rating_col" type="text" placeholder="e.g. stars" value="{{ form.rating_col if form else '' }}"></div>
+    <details style="margin-top:.9rem;">
+      <summary>Column names are different in my file</summary>
+      <div class="grid2" style="margin-top:.6rem;">
+        <div>
+          <label for="text_col">Review column name</label>
+          <input id="text_col" name="text_col" type="text"
+                 placeholder="e.g. comment"
+                 value="{{ form.text_col if form else '' }}">
+        </div>
+        <div>
+          <label for="rating_col">Rating column name</label>
+          <input id="rating_col" name="rating_col" type="text"
+                 placeholder="e.g. stars"
+                 value="{{ form.rating_col if form else '' }}">
+        </div>
       </div>
-      {% if columns %}<p class="small">Columns found in your file: {{ columns|join(', ') }}</p>{% endif %}
+      {% if columns %}
+      <p class="small" style="margin-top:.4rem;">Columns detected in your file: {{ columns | join(', ') }}</p>
+      {% endif %}
     </details>
 
-    <div class="row"><button type="submit" class="btn">Analyze Reviews</button>
-      <a class="btn ghost" href="{{ url_for('dashboard', sample=1) }}">Try bundled demo reviews</a></div>
+    <div class="row">
+      <button type="submit" class="btn">Run batch analysis</button>
+      <a class="btn ghost" href="{{ url_for('dashboard', sample=1) }}">Try demo reviews</a>
+    </div>
   </form>
 </section>
 
-<section class="card note">
-  If a CSV is uploaded it is used instead of the pasted text. Up to {{ 5000 }} rows are read.
-</section>
+<div class="card note">
+  If a CSV file is uploaded it takes priority over pasted text. The analyzer reads up to 5 000 rows.
+</div>
+
 {% endblock %}

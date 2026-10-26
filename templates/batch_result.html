@@ -1,10 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Batch Results{% endblock %}
+{% block title %}Batch Results — {{ r.movie }}{% endblock %}
 {% block content %}
-<h1>Results: {{ r.movie }}</h1>
-{% include "_batch_view.html" %}
-<div class="row">
-  <a class="btn" href="{{ url_for('batch') }}">← Analyze more reviews</a>
-  <a class="btn ghost" href="{{ url_for('dashboard') }}">Open dashboard</a>
+
+<div style="display:flex; align-items:center; gap:.6rem; margin-bottom:1rem; flex-wrap:wrap;">
+  <a class="btn ghost sm" href="{{ url_for('batch') }}">&larr; New batch</a>
+  <a class="btn ghost sm" href="{{ url_for('dashboard') }}">Open dashboard</a>
 </div>
+
+<h1 style="margin-bottom:1.25rem;">{{ r.movie }}</h1>
+
+{% include "_batch_view.html" %}
+
+<div class="row" style="margin-top:.5rem;">
+  <a class="btn" href="{{ url_for('batch') }}">&larr; Analyze more reviews</a>
+  <a class="btn ghost" href="{{ url_for('dashboard') }}">View on dashboard</a>
+</div>
+
 {% endblock %}

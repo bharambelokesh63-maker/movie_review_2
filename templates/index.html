@@ -1,37 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Movie Review Analyzer · Home{% endblock %}
+{% block title %}Movie Review Analyzer — Sentiment &amp; Opinion Mining{% endblock %}
 {% block content %}
+
 <section class="hero">
-  <h1>Movie Review Analyzer &amp; Opinion Mining</h1>
-  <p>Type a movie name and paste a review. Python NLP will tell you whether the opinion is positive, negative
-     or neutral, which words drive it, what emotions appear and which names are mentioned.</p>
+  <span class="hero-sub">NLP Analysis Tool</span>
+  <h1>Movie Review Analyzer</h1>
+  <p>Enter a movie name and paste a review. The Python backend tokenizes the text, removes stop words,
+     runs VADER sentiment analysis, extracts opinion words, detects emotions, identifies named entities
+     and ranks keywords by TF-IDF — all in one pass.</p>
 </section>
 
 <section class="card">
   <h2>Analyze a review</h2>
   <form method="post" action="{{ url_for('analyze') }}" class="js-loading">
-    <label for="movie">Movie name</label>
-    <input id="movie" name="movie" type="text" maxlength="120" placeholder="e.g. Inception" value="{{ movie or '' }}">
+    <label for="movie">Movie title</label>
+    <input id="movie" name="movie" type="text" maxlength="120"
+           placeholder="e.g. Oppenheimer" value="{{ movie or '' }}">
 
-    <label for="review">Review</label>
-    <textarea id="review" name="review" rows="7" maxlength="20000" placeholder="Write or paste a movie review here…">{{ review or '' }}</textarea>
-    <div class="hint"><span id="charcount">0</span> characters</div>
+    <label for="review">Review text</label>
+    <textarea id="review" name="review" rows="7" maxlength="20000"
+              placeholder="Paste or type a review here. Longer reviews give richer results.">{{ review or '' }}</textarea>
+    <div class="hint"><span id="charcount">0</span> / 20 000 characters</div>
 
     <div class="row">
-      <button type="submit" class="btn">Analyze Review</button>
-      <button type="button" class="btn ghost" onclick="fillExample()">Use example review</button>
+      <button type="submit" class="btn" id="btn-analyze">Run Analysis</button>
+      <button type="button" class="btn ghost" onclick="fillExample()">Load example</button>
     </div>
   </form>
 </section>
 
-<section class="grid3">
-  <div class="card"><h3>1 · You write</h3><p>Enter one review here, or many reviews on the <a href="{{ url_for('batch') }}">Multiple Reviews</a> page.</p></div>
-  <div class="card"><h3>2 · Python analyzes</h3><p>Flask sends the text to NLP modules: tokenizing, stop-word removal, VADER sentiment, TF-IDF, NER, emotion rules.</p></div>
-  <div class="card"><h3>3 · You read</h3><p>The result page shows sentiment, score, keywords, emotions, entities and a short summary.</p></div>
-</section>
+<div class="section-title">How it works</div>
+<div class="grid3">
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <h3>You provide the text</h3>
+    <p>Enter a single review here, or analyze many at once on the <a href="{{ url_for('batch') }}">Batch</a> page with CSV support.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <h3>Python processes it</h3>
+    <p>Flask routes the text through tokenization, stop-word removal, VADER scoring, TF-IDF, NER and emotion-cue detection.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <h3>You read the results</h3>
+    <p>Sentiment label and score, opinion words, emotions, named entities, keywords and aspect-level opinions are all shown on one page.</p>
+  </div>
+</div>
 
-<section class="card note">
-  <strong>Please note:</strong> predictions are estimates and can be wrong (sarcasm and mixed opinions are hard).
-  Statistics describe only the reviews you provide — not all viewers of a movie.
-</section>
+<div class="card note">
+  <strong>Scope:</strong> predictions are estimates and can be wrong — sarcasm and mixed opinions are difficult for rule-based methods.
+  Statistics describe only the reviews you supply, not all viewers of a film.
+</div>
+
 {% endblock %}

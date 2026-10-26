@@ -1,56 +1,190 @@
-{# Shared by batch_result.html and dashboard.html. Expects variable r. #}
-<div class="alert info">Source: {{ r.source }}. {{ r.disclaimer }}</div>
-{% if r.small_sample %}<div class="alert warn">Only {{ r.total }} review{{ 's' if r.total != 1 }} analyzed — too few to represent general opinion.</div>{% endif %}
+{# Shared batch results partial. Used by both batch_result.html and dashboard.html. Expects variable r. #}
 
-<section class="stats">
-  <div class="stat"><b>{{ r.total }}</b><span>reviews analyzed</span></div>
-  <div class="stat pos"><b>{{ r.percent.Positive }}%</b><span>positive ({{ r.counts.Positive }})</span></div>
-  <div class="stat neg"><b>{{ r.percent.Negative }}%</b><span>negative ({{ r.counts.Negative }})</span></div>
-  <div class="stat neu"><b>{{ r.percent.Neutral }}%</b><span>neutral ({{ r.counts.Neutral }})</span></div>
+{% if r.small_sample %}
+<div class="alert warn">
+  Only {{ r.total }} review{{ 's' if r.total != 1 }} were analyzed — too few to represent general opinion reliably.
+</div>
+{% endif %}
+
+<!-- Verdict panel -->
+<div class="verdict-panel">
+  <div class="verdict-text">
+    <h2>Overall verdict</h2>
+    <p>{{ r.summary }}</p>
+    <div class="small" style="color:rgba(255,255,255,.6); margin-top:.4rem;">
+      Source: {{ r.source }} &middot; {{ r.total }} review{{ 's' if r.total != 1 }} &middot; avg score {{ '%+.2f'|format(r.avg_score) }}
+    </div>
+  </div>
+  <span class="verdict-badge {{ r.verdict|lower }}">{{ r.verdict }}</span>
+</div>
+
+<!-- Key stats -->
+<div class="stats">
+  <div class="stat">
+    <b>{{ r.total }}</b>
+    <span>Reviews analyzed</span>
+  </div>
+  <div class="stat pos">
+    <b>{{ r.percent.Positive }}%</b>
+    <span>Positive &mdash; {{ r.counts.Positive }}</span>
+  </div>
+  <div class="stat neg">
+    <b>{{ r.percent.Negative }}%</b>
+    <span>Negative &mdash; {{ r.counts.Negative }}</span>
+  </div>
+  <div class="stat neu">
+    <b>{{ r.percent.Neutral }}%</b>
+    <span>Neutral &mdash; {{ r.counts.Neutral }}</span>
+  </div>
   {% if r.avg_rating is not none %}
-  <div class="stat"><b>{{ r.avg_rating }}</b><span>average rating ({{ r.n_rated }} rated)</span></div>
-  {% else %}
-  <div class="stat"><b>{{ '%+.2f'|format(r.avg_score) }}</b><span>average sentiment score</span></div>
-  {% endif %}
-</section>
-
-<section class="card"><h2>Summary</h2><p>{{ r.summary }}</p>
-  <p>Overall tone of these reviews: <span class="badge {{ r.verdict|lower }}">{{ r.verdict }}</span></p></section>
-
-<section class="grid2">
-  <div class="card"><h3>Sentiment distribution</h3><img class="chart" alt="Sentiment bar chart" src="{{ r.charts.sentiment }}"></div>
-  {% if r.charts.ratings %}<div class="card"><h3>Ratings</h3><img class="chart" alt="Rating histogram" src="{{ r.charts.ratings }}"></div>{% endif %}
-  {% if r.charts.words %}<div class="card"><h3>Most frequent words</h3><img class="chart" alt="Frequent words chart" src="{{ r.charts.words }}"></div>{% endif %}
-  {% if r.charts.keywords %}<div class="card"><h3>Top keywords (TF-IDF)</h3><img class="chart" alt="TF-IDF keywords chart" src="{{ r.charts.keywords }}"></div>{% endif %}
-</section>
-
-<section class="grid2">
-  <div class="card"><h3>Opinion words</h3>
-    <p><span class="tag pos">Positive</span>{% for w, c in r.pos_words %}<span class="chip pos">{{ w }} ×{{ c }}</span>{% else %}<em class="small">none</em>{% endfor %}</p>
-    <p><span class="tag neg">Negative</span>{% for w, c in r.neg_words %}<span class="chip neg">{{ w }} ×{{ c }}</span>{% else %}<em class="small">none</em>{% endfor %}</p>
-    {% if r.bigrams %}<p class="small">Frequent word pairs: {% for g, c in r.bigrams %}<span class="chip">{{ g }} ×{{ c }}</span>{% endfor %}</p>{% endif %}
+  <div class="stat">
+    <b>{{ r.avg_rating }}</b>
+    <span>Avg rating ({{ r.n_rated }} rated)</span>
   </div>
-  <div class="card"><h3>Topics people mention</h3>
-    {% if r.aspects %}<table><tr><th>Topic</th><th>Mentions</th><th>Opinion</th></tr>
-      {% for a in r.aspects %}<tr><td>{{ a.aspect }}</td><td>{{ a.mentions }}</td>
-      <td><span class="badge small {{ a.opinion|lower }}">{{ a.opinion }}</span></td></tr>{% endfor %}</table>
-    {% else %}<p class="small">No known topics (acting, plot, music…) were mentioned.</p>{% endif %}
-  </div>
-</section>
-
-<section class="card"><h3>Discovered topics (LDA)</h3>
-  {% if r.topics.error %}<p class="small">{{ r.topics.error }}</p>
   {% else %}
-    <div class="grid3">{% for t in r.topics.topics %}
-      <div><strong>Topic {{ t.id }}</strong><p>{% for w, p in t.words %}<span class="chip">{{ w }}</span>{% endfor %}</p></div>{% endfor %}</div>
-    <p class="small">{{ r.topics.note }}</p>
+  <div class="stat">
+    <b>{{ '%+.2f'|format(r.avg_score) }}</b>
+    <span>Avg sentiment score</span>
+  </div>
   {% endif %}
-</section>
+</div>
 
-<section class="card"><h3>Reviews{% if r.rows_hidden %} (first 50 of {{ r.total }}){% endif %}</h3>
-  <div class="table-wrap"><table><tr><th>#</th><th>Review</th><th>Score</th><th>Sentiment</th>{% if r.n_rated %}<th>Rating</th>{% endif %}</tr>
-    {% for row in r.rows %}<tr><td>{{ loop.index }}</td><td>{{ row.text[:160] }}{% if row.text|length > 160 %}…{% endif %}</td>
-      <td>{{ '%+.2f'|format(row.score) }}</td><td><span class="badge small {{ row.label|lower }}">{{ row.label }}</span></td>
-      {% if r.n_rated %}<td>{{ row.rating if row.rating is not none else '–' }}</td>{% endif %}</tr>{% endfor %}
-  </table></div>
-</section>
+<!-- Sentiment distribution bar -->
+<div class="card" style="margin-bottom:1rem;">
+  <h3 style="margin-bottom:.75rem;">Sentiment distribution</h3>
+  <div class="dist-bar">
+    {% if r.percent.Positive > 0 %}
+    <div class="dist-bar-seg pos" style="flex:{{ r.percent.Positive }};">
+      {% if r.percent.Positive >= 10 %}{{ r.percent.Positive }}%{% endif %}
+    </div>
+    {% endif %}
+    {% if r.percent.Neutral > 0 %}
+    <div class="dist-bar-seg neu" style="flex:{{ r.percent.Neutral }};">
+      {% if r.percent.Neutral >= 10 %}{{ r.percent.Neutral }}%{% endif %}
+    </div>
+    {% endif %}
+    {% if r.percent.Negative > 0 %}
+    <div class="dist-bar-seg neg" style="flex:{{ r.percent.Negative }};">
+      {% if r.percent.Negative >= 10 %}{{ r.percent.Negative }}%{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  <div style="display:flex; gap:1.5rem; margin-top:.5rem; flex-wrap:wrap;">
+    <span class="small"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--pos);margin-right:.3rem;vertical-align:middle;"></span>Positive {{ r.percent.Positive }}%</span>
+    <span class="small"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8b95a8;margin-right:.3rem;vertical-align:middle;"></span>Neutral {{ r.percent.Neutral }}%</span>
+    <span class="small"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--neg);margin-right:.3rem;vertical-align:middle;"></span>Negative {{ r.percent.Negative }}%</span>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="section-title">Charts</div>
+<div class="grid2">
+  <div class="card" style="margin-bottom:0;">
+    <h3>Sentiment breakdown</h3>
+    <img class="chart" alt="Sentiment bar chart" src="{{ r.charts.sentiment }}">
+  </div>
+  {% if r.charts.ratings %}
+  <div class="card" style="margin-bottom:0;">
+    <h3>Rating distribution</h3>
+    <img class="chart" alt="Rating histogram" src="{{ r.charts.ratings }}">
+  </div>
+  {% endif %}
+  {% if r.charts.words %}
+  <div class="card" style="margin-bottom:0;">
+    <h3>Most frequent words</h3>
+    <img class="chart" alt="Word frequency chart" src="{{ r.charts.words }}">
+  </div>
+  {% endif %}
+  {% if r.charts.keywords %}
+  <div class="card" style="margin-bottom:0;">
+    <h3>Top keywords (TF-IDF)</h3>
+    <img class="chart" alt="TF-IDF keyword chart" src="{{ r.charts.keywords }}">
+  </div>
+  {% endif %}
+</div>
+
+<!-- Opinion words + Aspects -->
+<div class="section-title">Opinion analysis</div>
+<div class="grid2">
+  <div class="card">
+    <h3>Opinion words</h3>
+    <div class="opinion-group">
+      <span class="tag pos">Positive</span>
+      {% for w, c in r.pos_words %}<span class="chip pos">{{ w }} &times;{{ c }}</span>{% else %}<em class="small">none</em>{% endfor %}
+    </div>
+    <div class="opinion-group">
+      <span class="tag neg">Negative</span>
+      {% for w, c in r.neg_words %}<span class="chip neg">{{ w }} &times;{{ c }}</span>{% else %}<em class="small">none</em>{% endfor %}
+    </div>
+    {% if r.bigrams %}
+    <div style="margin-top:.8rem; padding-top:.8rem; border-top:1px solid var(--border-soft);">
+      <span class="small" style="display:block; margin-bottom:.35rem; font-weight:600;">Frequent word pairs</span>
+      {% for g, c in r.bigrams %}<span class="chip">{{ g }} &times;{{ c }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Aspect-level sentiment</h3>
+    <p class="small" style="margin-bottom:.7rem;">How reviewers feel about specific topics.</p>
+    {% if r.aspects %}
+    <table>
+      <tr><th>Topic</th><th>Mentions</th><th>Sentiment</th></tr>
+      {% for a in r.aspects %}
+      <tr>
+        <td style="font-weight:500;">{{ a.aspect }}</td>
+        <td>{{ a.mentions }}</td>
+        <td><span class="badge {{ a.opinion|lower }}">{{ a.opinion }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="small">No recognizable review topics (acting, plot, music…) were mentioned.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Discovered topics (LDA) -->
+{% if not r.topics.error %}
+<div class="section-title">Topic modelling (LDA)</div>
+<div class="card">
+  <p class="small" style="margin-bottom:.8rem;">{{ r.topics.note }}</p>
+  <div class="grid3">
+    {% for t in r.topics.topics %}
+    <div class="card-flat">
+      <h4>Topic {{ t.id }}</h4>
+      {% for w, p in t.words %}<span class="chip">{{ w }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Individual reviews table -->
+<div class="section-title">Individual reviews{% if r.rows_hidden %} &mdash; first 50 of {{ r.total }} shown{% endif %}</div>
+<div class="card" style="padding:0; overflow:hidden;">
+  <div class="table-wrap">
+    <table>
+      <tr>
+        <th style="width:36px;">#</th>
+        <th>Review</th>
+        <th style="width:90px;">Score</th>
+        <th style="width:110px;">Sentiment</th>
+        {% if r.n_rated %}<th style="width:80px;">Rating</th>{% endif %}
+      </tr>
+      {% for row in r.rows %}
+      <tr>
+        <td style="color:var(--muted);">{{ loop.index }}</td>
+        <td class="review-preview" title="{{ row.text }}">{{ row.text[:160] }}{% if row.text|length > 160 %}&hellip;{% endif %}</td>
+        <td style="font-family:var(--mono); font-size:.83rem;">{{ '%+.2f'|format(row.score) }}</td>
+        <td><span class="badge {{ row.label|lower }}">{{ row.label }}</span></td>
+        {% if r.n_rated %}<td>{{ row.rating if row.rating is not none else '&ndash;' }}</td>{% endif %}
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="card info" style="margin-top:.5rem;">
+  {{ r.disclaimer }}
+</div>

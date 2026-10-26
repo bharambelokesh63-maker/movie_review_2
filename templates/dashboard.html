@@ -1,19 +1,54 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard — {{ r.movie if r else 'Movie Review Analyzer' }}{% endblock %}
 {% block content %}
-<h1>Movie Review Dashboard</h1>
+
 {% if r %}
-  {% if sample_used %}<div class="alert info">Showing the bundled <strong>demo</strong> reviews (fictional, for testing only).</div>{% endif %}
-  <p>Statistics for: <strong>{{ r.movie }}</strong></p>
-  {% include "_batch_view.html" %}
+
+<div class="dash-header">
+  <div>
+    <h1 class="dash-title">{{ r.movie }}</h1>
+    <div class="dash-meta">Dashboard &mdash; batch analysis results</div>
+  </div>
+  <div class="row" style="margin-top:0;">
+    <a class="btn ghost sm" href="{{ url_for('batch') }}">Analyze new batch</a>
+    <a class="btn ghost sm" href="{{ url_for('dashboard', sample=1) }}">Reload demo</a>
+  </div>
+</div>
+
+{% if sample_used %}
+<div class="alert info">
+  Showing the bundled demo data (fictional reviews created for testing). Upload your own data on the
+  <a href="{{ url_for('batch') }}">Batch</a> page for real results.
+</div>
+{% endif %}
+
+{% include "_batch_view.html" %}
+
 {% else %}
-  <section class="card">
-    <h2>No reviews analyzed yet</h2>
-    <p>The dashboard shows statistics for the last set of reviews you analyzed. Nothing is shown until you provide data.</p>
-    <div class="row">
-      <a class="btn" href="{{ url_for('batch') }}">Analyze your reviews</a>
-      <a class="btn ghost" href="{{ url_for('dashboard', sample=1) }}">Load demo reviews</a>
-    </div>
-  </section>
+
+<!-- Empty state -->
+<div style="max-width:560px; margin:3rem auto; text-align:center;">
+  <h1 style="margin-bottom:.75rem;">Dashboard</h1>
+  <p style="color:var(--muted); font-size:1rem; margin-bottom:2rem;">
+    The dashboard displays statistics and charts for the most recent batch you analyzed.
+    Nothing is stored between sessions — results are kept in memory while the server is running.
+  </p>
+
+  <div class="card" style="text-align:left; margin-bottom:1rem;">
+    <h3 style="margin-bottom:.5rem;">Analyze your own reviews</h3>
+    <p class="small">Paste multiple reviews separated by a blank line, or upload a CSV with a
+      <code>review</code> or <code>text</code> column. An optional <code>rating</code> column
+      will be averaged and charted.</p>
+    <a class="btn" href="{{ url_for('batch') }}">Open batch analysis</a>
+  </div>
+
+  <div class="card" style="text-align:left;">
+    <h3 style="margin-bottom:.5rem;">Try with demo data</h3>
+    <p class="small">Load 20 fictional sample reviews to explore all dashboard sections — distribution
+      bar, charts, opinion words, aspect table, topic model and review list.</p>
+    <a class="btn ghost" href="{{ url_for('dashboard', sample=1) }}">Load demo reviews</a>
+  </div>
+</div>
+
 {% endif %}
 {% endblock %}

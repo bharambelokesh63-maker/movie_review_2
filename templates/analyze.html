@@ -1,85 +1,206 @@
 {% extends "base.html" %}
-{% block title %}Analysis · {{ r.movie }}{% endblock %}
+{% block title %}Analysis — {{ r.movie }}{% endblock %}
 {% block content %}
-<h1>{{ r.movie }}</h1>
+
+<div style="display:flex; align-items:center; gap:.6rem; margin-bottom:1rem; flex-wrap:wrap;">
+  <a class="btn ghost sm" href="{{ url_for('home') }}">&larr; New analysis</a>
+</div>
+
+<h1 style="margin-bottom:.3rem;">{{ r.movie }}</h1>
+<div class="small" style="margin-bottom:1.2rem;">
+  {{ r.stats.word_count }} words &middot; {{ r.stats.sentence_count }} sentences &middot; {{ r.stats.language }}
+</div>
 
 {% for w in r.warnings %}<div class="alert warn">{{ w }}</div>{% endfor %}
 
-<section class="card">
-  <h2>Result</h2>
-  <div class="result-head">
-    <span class="badge {{ r.sentiment|lower }}">{{ r.sentiment }}</span>
-    <span class="score">Score: {{ '%+.2f'|format(r.score) }}</span>
+<!-- Verdict card -->
+<section class="card" style="margin-bottom:1.1rem;">
+  <div class="result-header">
+    <div>
+      <div style="margin-bottom:.5rem;">
+        <span class="badge {{ r.sentiment|lower }}">{{ r.sentiment }}</span>
+      </div>
+      <div class="result-score" style="color: {% if r.sentiment == 'Positive' %}var(--pos){% elif r.sentiment == 'Negative' %}var(--neg){% else %}var(--muted){% endif %};">
+        {{ '%+.3f'|format(r.score) }}
+      </div>
+      <div class="small" style="margin-top:.2rem;">VADER compound score (range: -1.0 to +1.0)</div>
+    </div>
+    <div style="flex:1; min-width:200px;">
+      <!-- Sentiment bar -->
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>Negative</span><span>Neutral</span><span>Positive</span></div>
+        <div class="score-bar-track">
+          <div class="score-bar-mid"></div>
+          {% set pct = (r.score | abs * 50) | int %}
+          {% if r.score > 0.05 %}
+            <div class="score-bar-fill pos" style="width:{{ [pct, 48]|min }}%;"></div>
+          {% elif r.score < -0.05 %}
+            <div class="score-bar-fill neg" style="width:{{ [pct, 48]|min }}%;"></div>
+          {% else %}
+            <div class="score-bar-fill neu"></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
+
   <p>{{ r.summary }}</p>
-  <details><summary>What does the score mean?</summary><p class="small">{{ r.score_explanation }}</p></details>
+
+  <details>
+    <summary>What does the score mean?</summary>
+    <p class="small" style="margin-top:.4rem;">{{ r.score_explanation }}</p>
+  </details>
+
   {% if r.ml %}
-  <p class="small">Trained model ({{ r.ml.source }}) predicts <strong>{{ r.ml.label }}</strong> with probability
-    {{ r.ml.probability }}. A probability is the model's own estimate and is only as good as its training data.</p>
+  <div style="margin-top:.8rem; padding-top:.8rem; border-top:1px solid var(--border-soft);">
+    <span class="small">Trained model ({{ r.ml.source }}) predicts
+      <strong>{{ r.ml.label }}</strong> — probability {{ r.ml.probability }}.
+      Probability is the model's own confidence and is only as good as its training data.
+    </span>
+  </div>
   {% endif %}
 </section>
 
-<section class="stats">
-  <div class="stat"><b>{{ r.stats.word_count }}</b><span>words</span></div>
-  <div class="stat"><b>{{ r.stats.sentence_count }}</b><span>sentences</span></div>
-  <div class="stat"><b>{{ r.stats.language }}</b><span>language</span></div>
-</section>
+<!-- Stats row -->
+<div class="stats">
+  <div class="stat">
+    <b>{{ r.stats.word_count }}</b>
+    <span>Words</span>
+  </div>
+  <div class="stat">
+    <b>{{ r.stats.sentence_count }}</b>
+    <span>Sentences</span>
+  </div>
+  <div class="stat">
+    <b>{{ r.stats.language }}</b>
+    <span>Language</span>
+  </div>
+  {% if r.keywords %}
+  <div class="stat">
+    <b>{{ r.keywords|length }}</b>
+    <span>Keywords found</span>
+  </div>
+  {% endif %}
+  {% if r.entities.entities %}
+  <div class="stat">
+    <b>{{ r.entities.entities|length }}</b>
+    <span>Named entities</span>
+  </div>
+  {% endif %}
+</div>
 
-<section class="grid2">
+<!-- Opinion words + Emotions -->
+<div class="grid2">
   <div class="card">
     <h3>Opinion words</h3>
-    <p><span class="tag pos">Positive</span>
-      {% for w, c in r.opinions.positive %}<span class="chip pos">{{ w }}{% if c > 1 %} ×{{ c }}{% endif %}</span>{% else %}<em class="small">none found</em>{% endfor %}</p>
-    <p><span class="tag neg">Negative</span>
-      {% for w, c in r.opinions.negative %}<span class="chip neg">{{ w }}{% if c > 1 %} ×{{ c }}{% endif %}</span>{% else %}<em class="small">none found</em>{% endfor %}</p>
+    <div class="opinion-group">
+      <span class="tag pos">Positive</span>
+      {% for w, c in r.opinions.positive %}
+        <span class="chip pos">{{ w }}{% if c > 1 %} &times;{{ c }}{% endif %}</span>
+      {% else %}
+        <em class="small">none found</em>
+      {% endfor %}
+    </div>
+    <div class="opinion-group">
+      <span class="tag neg">Negative</span>
+      {% for w, c in r.opinions.negative %}
+        <span class="chip neg">{{ w }}{% if c > 1 %} &times;{{ c }}{% endif %}</span>
+      {% else %}
+        <em class="small">none found</em>
+      {% endfor %}
+    </div>
   </div>
 
   <div class="card">
     <h3>Detected emotions</h3>
     {% if r.emotions.emotions %}
-    <table><tr><th>Emotion</th><th>Cue words</th></tr>
-      {% for e in r.emotions.emotions %}<tr><td>{{ e.emotion }}</td><td>{{ e.cue_words|join(', ') }}</td></tr>{% endfor %}
+    <table>
+      <tr><th>Emotion</th><th>Cue words</th></tr>
+      {% for e in r.emotions.emotions %}
+      <tr>
+        <td style="font-weight:500;">{{ e.emotion }}</td>
+        <td>{{ e.cue_words | join(', ') }}</td>
+      </tr>
+      {% endfor %}
     </table>
-    {% else %}<p class="small">No emotion cue words found.</p>{% endif %}
-    <p class="small">{{ r.emotions.method }}</p>
+    {% else %}
+    <p class="small">No emotion cue words detected in this text.</p>
+    {% endif %}
+    <p class="small" style="margin-top:.6rem;">{{ r.emotions.method }}</p>
   </div>
+</div>
 
+<!-- Keywords + Entities -->
+<div class="grid2">
   <div class="card">
-    <h3>Keywords</h3>
+    <h3>Top keywords <span class="small">(TF-IDF)</span></h3>
     {% if r.keywords %}
-    <table><tr><th>Word</th><th>TF-IDF</th></tr>
-      {% for w, s in r.keywords %}<tr><td>{{ w }}</td><td>{{ s }}</td></tr>{% endfor %}
+    <table>
+      <tr><th>Word</th><th>Score</th></tr>
+      {% for w, s in r.keywords %}
+      <tr><td>{{ w }}</td><td style="font-family:var(--mono); font-size:.83rem;">{{ s }}</td></tr>
+      {% endfor %}
     </table>
-    {% else %}<p class="small">Not enough words to extract keywords.</p>{% endif %}
-    {% if r.bigrams %}<p class="small">Frequent word pairs: {% for g, c in r.bigrams %}<span class="chip">{{ g }}</span>{% endfor %}</p>{% endif %}
+    {% else %}
+    <p class="small">Not enough words to extract TF-IDF keywords.</p>
+    {% endif %}
+    {% if r.bigrams %}
+    <div style="margin-top:.75rem;">
+      <span class="small" style="display:block; margin-bottom:.3rem;">Frequent word pairs</span>
+      {% for g, c in r.bigrams %}<span class="chip">{{ g }}</span>{% endfor %}
+    </div>
+    {% endif %}
   </div>
 
   <div class="card">
     <h3>Named entities</h3>
     {% if r.entities.entities %}
-    <table><tr><th>Text</th><th>Label</th></tr>
-      {% for e in r.entities.entities %}<tr><td>{{ e.text }}</td><td>{{ e.label }}</td></tr>{% endfor %}
+    <table>
+      <tr><th>Text</th><th>Type</th></tr>
+      {% for e in r.entities.entities %}
+      <tr>
+        <td style="font-weight:500;">{{ e.text }}</td>
+        <td><span class="chip">{{ e.label }}</span></td>
+      </tr>
+      {% endfor %}
     </table>
-    {% else %}<p class="small">No entities detected.</p>{% endif %}
-    <p class="small">Method: {{ r.entities.method }}.{% if r.entities.note %} {{ r.entities.note }}{% endif %}</p>
+    {% else %}
+    <p class="small">No named entities detected.</p>
+    {% endif %}
+    <p class="small" style="margin-top:.6rem;">Method: {{ r.entities.method }}.
+    {% if r.entities.note %} {{ r.entities.note }}{% endif %}</p>
   </div>
-</section>
+</div>
 
+<!-- Aspect breakdown -->
 {% if r.aspects %}
 <section class="card">
-  <h3>What the review talks about</h3>
-  <table><tr><th>Topic</th><th>Mentions</th><th>Opinion</th></tr>
-    {% for a in r.aspects %}<tr><td>{{ a.aspect }}</td><td>{{ a.mentions }}</td>
-      <td><span class="badge small {{ a.opinion|lower }}">{{ a.opinion }}</span> ({{ '%+.2f'|format(a.avg_score) }})</td></tr>{% endfor %}
+  <h3>Aspect-level sentiment</h3>
+  <p class="small" style="margin-bottom:.8rem;">Mentions of known review topics and the sentiment around each one.</p>
+  <table>
+    <tr><th>Topic</th><th>Mentions</th><th>Sentiment</th><th>Score</th></tr>
+    {% for a in r.aspects %}
+    <tr class="aspect-row">
+      <td style="font-weight:500;">{{ a.aspect }}</td>
+      <td>{{ a.mentions }}</td>
+      <td><span class="badge {{ a.opinion|lower }}">{{ a.opinion }}</span></td>
+      <td style="font-family:var(--mono); font-size:.83rem;">{{ '%+.2f'|format(a.avg_score) }}</td>
+    </tr>
+    {% endfor %}
   </table>
 </section>
 {% endif %}
 
+<!-- Original review -->
 <section class="card">
   <h3>Original review</h3>
   <blockquote>{{ r.review }}</blockquote>
-  <p class="small">{{ r.disclaimer }}</p>
+  <p class="small" style="margin-top:.7rem;">{{ r.disclaimer }}</p>
 </section>
 
-<a class="btn" href="{{ url_for('home') }}">← Analyze another review</a>
+<div class="row">
+  <a class="btn" href="{{ url_for('home') }}">&larr; Analyze another review</a>
+  <a class="btn ghost" href="{{ url_for('batch') }}">Analyze multiple reviews</a>
+</div>
+
 {% endblock %}

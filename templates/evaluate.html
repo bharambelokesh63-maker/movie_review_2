@@ -1,57 +1,141 @@
 {% extends "base.html" %}
 {% block title %}Model Evaluation{% endblock %}
 {% block content %}
+
 <h1>Sentiment model evaluation</h1>
-<p>Train a <strong>TF-IDF + Logistic Regression</strong> classifier on labelled reviews and measure how it does on
-   reviews it has never seen (25% hold-out test set). Numbers appear only after a real evaluation.</p>
+<p style="color:var(--ink-soft); margin-bottom:1.5rem;">
+  Train a <strong>TF-IDF + Logistic Regression</strong> classifier on labelled reviews and measure accuracy,
+  precision, recall and F1 on a 25% hold-out test set. Numbers only appear after a real evaluation run.
+</p>
 
 <section class="card">
   <form method="post" action="{{ url_for('evaluate') }}" enctype="multipart/form-data" class="js-loading">
-    <label for="csv_file">Labelled CSV (needs a text column and a sentiment/label column)</label>
+    <label for="csv_file">Labelled CSV file</label>
     <input id="csv_file" name="csv_file" type="file" accept=".csv,.txt">
-    <details><summary>Column names differ?</summary>
-      <div class="grid2">
-        <div><label for="text_col">Review column</label><input id="text_col" name="text_col" type="text" placeholder="review"></div>
-        <div><label for="label_col">Label column</label><input id="label_col" name="label_col" type="text" placeholder="sentiment"></div>
+    <div class="hint">Needs a text column and a sentiment/label column. Leave empty to use the bundled demo file (56 reviews).</div>
+
+    <details style="margin-top:.8rem;">
+      <summary>Column names are different in my file</summary>
+      <div class="grid2" style="margin-top:.6rem;">
+        <div>
+          <label for="text_col">Review column</label>
+          <input id="text_col" name="text_col" type="text" placeholder="review">
+        </div>
+        <div>
+          <label for="label_col">Label column</label>
+          <input id="label_col" name="label_col" type="text" placeholder="sentiment">
+        </div>
       </div>
-      {% if columns %}<p class="small">Columns in your file: {{ columns|join(', ') }}</p>{% endif %}
+      {% if columns %}<p class="small" style="margin-top:.4rem;">Columns in your file: {{ columns | join(', ') }}</p>{% endif %}
     </details>
-    <p class="small">Labels accepted: positive/negative/neutral, pos/neg, 1/0. Leave the file empty to use the bundled demo data.</p>
-    <button class="btn" type="submit">Train &amp; Evaluate</button>
+
+    <p class="small" style="margin-top:.75rem;">
+      Labels accepted: <code>positive</code> / <code>negative</code> / <code>neutral</code>,
+      <code>pos</code> / <code>neg</code>, <code>1</code> / <code>0</code>
+    </p>
+
+    <button class="btn" type="submit">Train &amp; evaluate</button>
   </form>
-  {% if model_source %}<p class="small">A trained model is saved (trained on: {{ model_source }}). Single review results now also show its prediction.</p>{% endif %}
+
+  {% if model_source %}
+  <div class="alert info" style="margin-top:1rem; margin-bottom:0;">
+    A trained model is saved (trained on: {{ model_source }}).
+    Single-review results on the Analyze page now also show its prediction.
+  </div>
+  {% endif %}
 </section>
 
 {% if report %}
-<section class="stats">
-  <div class="stat"><b>{{ report.accuracy }}</b><span>accuracy</span></div>
-  <div class="stat"><b>{{ report.weighted.precision }}</b><span>precision (weighted)</span></div>
-  <div class="stat"><b>{{ report.weighted.recall }}</b><span>recall (weighted)</span></div>
-  <div class="stat"><b>{{ report.weighted.f1 }}</b><span>F1-score (weighted)</span></div>
-</section>
+
+<!-- Metrics -->
+<div class="section-title">Evaluation results</div>
+<div class="stats">
+  <div class="stat">
+    <b>{{ report.accuracy }}</b>
+    <span>Accuracy</span>
+  </div>
+  <div class="stat">
+    <b>{{ report.weighted.precision }}</b>
+    <span>Precision (weighted)</span>
+  </div>
+  <div class="stat">
+    <b>{{ report.weighted.recall }}</b>
+    <span>Recall (weighted)</span>
+  </div>
+  <div class="stat">
+    <b>{{ report.weighted.f1 }}</b>
+    <span>F1-score (weighted)</span>
+  </div>
+</div>
 
 {% if report.small_data_warning %}
-<div class="alert warn">Only {{ report.n_total }} labelled reviews were used ({{ report.n_test }} for testing). With so little
-  data these metrics are very rough and can change a lot with a different split. Use a larger dataset (hundreds or thousands of reviews) for meaningful results.</div>
+<div class="alert warn">
+  Only {{ report.n_total }} labelled reviews were used ({{ report.n_test }} for testing).
+  With so little data these metrics are rough and can shift significantly with a different random split.
+  Use hundreds or thousands of reviews for meaningful numbers.
+</div>
 {% endif %}
 
+<!-- Detail table -->
 <section class="card">
-  <h3>Details</h3>
-  <p class="small">Data source: {{ report.source }} · train {{ report.n_train }} / test {{ report.n_test }} ·
-    classes: {% for k, v in report.class_counts.items() %}{{ k }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}</p>
-  <table><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Test reviews</th></tr>
-    {% for c in report.per_class %}<tr><td>{{ c.label }}</td><td>{{ c.precision }}</td><td>{{ c.recall }}</td><td>{{ c.f1 }}</td><td>{{ c.support }}</td></tr>{% endfor %}
+  <h3 style="margin-bottom:.3rem;">Per-class metrics</h3>
+  <p class="small" style="margin-bottom:.8rem;">
+    Data: {{ report.source }} &mdash;
+    train {{ report.n_train }} / test {{ report.n_test }} &mdash;
+    classes: {% for k, v in report.class_counts.items() %}{{ k }} ({{ v }}){{ ', ' if not loop.last }}{% endfor %}
+  </p>
+  <table>
+    <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Test reviews</th></tr>
+    {% for c in report.per_class %}
+    <tr>
+      <td><span class="badge {{ c.label|lower }}">{{ c.label }}</span></td>
+      <td style="font-family:var(--mono);">{{ c.precision }}</td>
+      <td style="font-family:var(--mono);">{{ c.recall }}</td>
+      <td style="font-family:var(--mono);">{{ c.f1 }}</td>
+      <td>{{ c.support }}</td>
+    </tr>
+    {% endfor %}
   </table>
-  <h3>Confusion matrix (rows = true class, columns = predicted)</h3>
-  <table><tr><th></th>{% for c in report.classes %}<th>{{ c }}</th>{% endfor %}</tr>
-    {% for row in report.confusion %}{% set i = loop.index0 %}<tr><th>{{ report.classes[i] }}</th>{% for v in row %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}
-  </table>
-  <p>For comparison, the VADER analyzer scored accuracy <strong>{{ report.vader_accuracy }}</strong> on the same test reviews.</p>
 </section>
+
+<!-- Confusion matrix -->
+<section class="card">
+  <h3 style="margin-bottom:.5rem;">Confusion matrix</h3>
+  <p class="small" style="margin-bottom:.8rem;">Rows = true class &middot; columns = predicted class</p>
+  <div class="table-wrap">
+    <table>
+      <tr>
+        <th></th>
+        {% for c in report.classes %}<th>Pred: {{ c }}</th>{% endfor %}
+      </tr>
+      {% for row in report.confusion %}{% set i = loop.index0 %}
+      <tr>
+        <th>True: {{ report.classes[i] }}</th>
+        {% for v in row %}
+        <td style="font-family:var(--mono); {% if loop.index0 == i %}font-weight:700; background:var(--accent-light);{% endif %}">{{ v }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <p style="margin-top:.9rem;">
+    For comparison, VADER scored accuracy <strong>{{ report.vader_accuracy }}</strong> on the same test reviews.
+  </p>
+</section>
+
 {% endif %}
 
-<section class="card note">
-  <strong>Reading the metrics.</strong> Accuracy = correct predictions ÷ all predictions. Precision = of the reviews predicted as a class, how many truly were.
-  Recall = of the reviews truly in a class, how many were found. F1 = balance of precision and recall.
-</section>
+<!-- Glossary -->
+<div class="section-title">Reading the metrics</div>
+<div class="card">
+  <table>
+    <tr><th>Metric</th><th>Meaning</th></tr>
+    <tr><td>Accuracy</td><td>Correct predictions &divide; all predictions</td></tr>
+    <tr><td>Precision</td><td>Of reviews predicted as a class, how many truly were</td></tr>
+    <tr><td>Recall</td><td>Of reviews truly in a class, how many the model found</td></tr>
+    <tr><td>F1</td><td>Harmonic mean of precision and recall &mdash; balanced measure</td></tr>
+    <tr><td>Confusion matrix diagonal</td><td>Correctly classified reviews (highlighted in blue)</td></tr>
+  </table>
+</div>
+
 {% endblock %}
